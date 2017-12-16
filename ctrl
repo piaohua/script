@@ -31,6 +31,17 @@ ROBOT_BIN="${workDir}/${appName}-robot"
 SERVER_PID="${workDir}/${appName}-server.pid"
 ROBOT_PID="${workDir}/${appName}-robot.pid"
 
+LOGFILE="${workDir}/ctrl.log"
+
+get_curr_time() {
+    echo `date +"%Y-%m-%d %H:%M:%S"`
+}
+
+save_log() {
+    echo "" >> ${LOGFILE}
+    echo "Time: "`get_curr_time`"   $1 " >> ${LOGFILE}
+}
+
 get_src_file() {
     case $1 in
         server)
@@ -108,6 +119,7 @@ build() {
             export GOARCH=amd64
             export GOPATH=${GOPATH}
             echo -n "编译LINUX版本 ... "
+            save_log "编译LINUX版本 ... "
             ;;
     esac
     if [[ ${binFile} == '' ]]; then
@@ -119,6 +131,7 @@ build() {
         exit 1
     fi
     echo "编译中 ... "
+    save_log "编译中 ... "
     go build -o ${binFile} -ldflags "-w -s" ${srcFile}
 }
 
@@ -155,10 +168,13 @@ start() {
             exit 1
         fi
         echo -n "正在启动 ... "
+        save_log "正在启动 ${binFile} ... "
         # nohup ${binFile} -log_dir="log" >/dev/null 2>$1.log &
         ${binFile} -log_dir="log" -stderrthreshold="ERROR" >/dev/null 2>$1.log &
         #${binFile} -log_dir="log" -stderrthreshold="ERROR" >/dev/null 2>&1 &
         echo $! > ${pidFile}
+        pid=`cat ${pidFile}`
+        save_log "${binFile} started ${pid} ... "
         sleep 3s
         status $1
     fi
@@ -202,10 +218,12 @@ stop() {
     fi
     if [ "$pid" != '' ]; then
         echo -n "正在停止 ... "
+        save_log "${pidFile} 正在停止 ${pid} ... "
         #kill -9 $PID
         kill -2 $pid
         sleep 15s
         echo "$pid killed!"
+        save_log "${pid} killed! "
     else
         echo "服务不在运行状态"
     fi
